@@ -18,10 +18,59 @@ DONE_PROBLEMS = open("problems.txt",'r').readlines()
 
 
 def checker():
-    current_problem = open("problems.txt", 'r').readlines()[-1]
     
+    ctime = time.strftime('%y/%m/%d', time.localtime(time.time()))
+    read_problem = open("problems.txt", 'r').readlines()[-1]
+    current_problem = read_problem.split('\t')[0]
+    current_name = read_problem.split('\t')[1]
+    current_link = read_problem.split('\t')[2][:-1]
     
+    hdr = {'User-Agent': 'Mozilla/5.0', 'referer' : 'http://m.naver.com'}
+    
+    check_dict = dict.fromkeys(MEMBER_ID, False)
+    
+    for member in MEMBER_ID:
+        try:
+            pre_url = 'https://www.acmicpc.net/user/' + member
 
+            url = urllib.request.Request(pre_url, headers=hdr)
+            my_url = urlopen(url)
+            soup = BeautifulSoup(my_url,'html.parser')
+
+            table = soup.find_all(class_="panel-body")
+            problem = table[0].find_all(class_="problem_number")
+
+
+
+            for i in range(len(problem)):
+                ids = problem[i].text
+                if current_problem == ids:
+                    check_dict[member] = True
+                    break
+        except:
+            continue
+    
+    text = '등록 된 참가자 : ' + ', '.join(MEMBER_ID) + '\n' + '현재까지 이 알고리즘을 푼 사람은 '
+    
+    clear = [member for member in MEMBER_ID if check_dict[member]]
+    if len(clear) != 0:
+        text = text + ' '.join(clear) + '!!'
+    
+    else:
+        text = text + '없습니다....'
+    
+    attachments_dict = dict()
+    attachments_dict['pretext'] = ctime
+    attachments_dict['title'] = current_name + " 알고리즘 현황 보고"
+    attachments_dict['title_link'] = current_link
+    attachments_dict['fallback'] = "현황 보고드립니다."
+    attachments_dict['text'] = text
+    #attachments_dict['mrkdwn_in'] = ["text", "pretext"]  # 마크다운을 적용시킬 인자들을 선택합니다.
+    attachments = [attachments_dict]
+    
+    
+    slack.chat.post_message(channel='#python-algo',text=None,attachments=attachments)
+        
 
 def algoPick():
     done = False
@@ -59,8 +108,8 @@ def algoPick():
                 print("so hard")
             else:
                 done = True
-                with open("problems.txt",'a') as f:
-                    f.write(p_num + '\n')
+                with open("problems.txt",'a',encoding='utf-8') as f:
+                    f.write(p_num + '\t' + name + '\t' + link '\n')
                 print(hard,name,link,other)
     
         except:
@@ -80,4 +129,4 @@ def algoPick():
     slack.chat.post_message(channel='#python-algo',text=None,attachments=attachments)
     
 if __name__ == "__main__":
-    algoPick()
+    checker()
